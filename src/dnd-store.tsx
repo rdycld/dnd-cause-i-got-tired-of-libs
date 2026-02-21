@@ -17,7 +17,6 @@ export type Dragable = {
 
 export const createDndStore = () => {
   const listeners = new Set<VoidFunction>();
-
   const dragableItems = new Map<string, Dragable & { cleanup: VoidFunction }>();
 
   const snapshot: {
@@ -113,10 +112,15 @@ export const createDndStore = () => {
     return cleanup;
   };
 
-  const useMonitor = () => {
+  const useMonitor = (
+    onChange: (state: {
+      dragSource: Dragable | undefined;
+      target: Dragable | undefined;
+    }) => void,
+  ) => {
     const lastSnapshot = useRef({ ...getSnapshot() });
 
-    return useSyncExternalStore(
+    useSyncExternalStore(
       (onStoreChange) => {
         const f = () => {
           const prev = lastSnapshot.current;
@@ -128,6 +132,7 @@ export const createDndStore = () => {
           ) {
             lastSnapshot.current = { ...next };
             onStoreChange();
+            onChange(lastSnapshot.current);
           }
         };
 

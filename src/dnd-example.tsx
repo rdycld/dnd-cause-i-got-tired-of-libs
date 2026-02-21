@@ -1,13 +1,13 @@
-import { useCallback, useState } from 'react';
-import { DnDProvider } from './dnd';
-import { useSortable } from './use-sortable';
+import { memo, useCallback, useState } from 'react';
 import { assert } from './assert';
+import { createDndStore, type Dragable } from './dnd-store';
 
-const Item = ({ id, label }: { id: string; label: string }) => {
+const { useMonitor, useSortable } = createDndStore();
+
+const Item = memo(({ id, label }: { id: string; label: string }) => {
   const { ref, isDragging } = useSortable(id, {
     type: 'item',
     accept: ['item'],
-    priority: 1,
   });
 
   return (
@@ -25,47 +25,48 @@ const Item = ({ id, label }: { id: string; label: string }) => {
       {label}
     </div>
   );
-};
+});
 
-const Column = ({
-  id,
-  items,
-  label,
-}: {
-  id: string;
-  label: string;
-  items: { id: string; label: string }[];
-}) => {
-  const { ref, isDragging } = useSortable(id, {
-    type: 'column',
-    accept: ['column', 'item'],
-    priority: 0,
+const Column = memo(
+  ({
+    id,
     items,
-  });
+    label,
+  }: {
+    id: string;
+    label: string;
+    items: { id: string; label: string }[];
+  }) => {
+    const { ref, isDragging } = useSortable(id, {
+      type: 'column',
+      accept: ['column', 'item'],
+      items,
+    });
 
-  return (
-    <div
-      style={{
-        userSelect: 'none',
-        padding: 10,
-        minWidth: 150,
-        paddingBottom: 100,
-        border: '1px solid red',
-        background: 'fuchsia',
-        opacity: isDragging ? 0.5 : 1,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 5,
-      }}
-      ref={ref}
-    >
-      {label}
-      {items.map((item) => (
-        <Item key={item.id} id={item.id} label={item.label} />
-      ))}
-    </div>
-  );
-};
+    return (
+      <div
+        style={{
+          userSelect: 'none',
+          padding: 10,
+          minWidth: 150,
+          paddingBottom: 100,
+          border: '1px solid red',
+          background: 'fuchsia',
+          opacity: isDragging ? 0.5 : 1,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 5,
+        }}
+        ref={ref}
+      >
+        {label}
+        {items.map((item) => (
+          <Item key={item.id} id={item.id} label={item.label} />
+        ))}
+      </div>
+    );
+  },
+);
 
 const genNextLabel = (() => {
   let label = 0;
@@ -85,15 +86,18 @@ const genColumn = () => ({
 });
 
 const items2 = [genColumn(), genColumn(), genColumn(), genColumn()];
-export const App = () => {
+export const DnDExample = () => {
   const [state, setState] = useState(items2);
 
-  const handleDragOver = useCallback(
-    (event: {
-      source: { type: string; id: string };
-      target: { type: string; id: string };
+  const onDragChange = useCallback(
+    ({
+      dragSource: source,
+      target,
+    }: {
+      dragSource: Dragable | undefined;
+      target: Dragable | undefined;
     }) => {
-      const { source, target } = event;
+      if (!(source && target)) return;
 
       if (source.type === 'column') {
         setState((p) => {
@@ -109,7 +113,6 @@ export const App = () => {
           copy.splice(targetIdx, 0, removed);
 
           return copy;
-          //end move in array
         });
         return;
       }
@@ -174,23 +177,21 @@ export const App = () => {
     [],
   );
 
+  useMonitor(onDragChange);
+
   return (
-    <>
-      <DnDProvider onDragOver={handleDragOver}>
-        <div
-          style={{
-            paddingTop: 20,
-            display: 'flex',
-            gap: 10,
-            justifyContent: 'stretch',
-          }}
-        >
-          {state.map(({ id, items, label }) => (
-            <Column id={id} key={id} items={items} label={label} />
-          ))}
-        </div>
-      </DnDProvider>
-    </>
+    <div
+      style={{
+        paddingTop: 20,
+        display: 'flex',
+        gap: 10,
+        justifyContent: 'stretch',
+      }}
+    >
+      {state.map(({ id, items, label }) => (
+        <Column id={id} key={id} items={items} label={label} />
+      ))}
+    </div>
   );
 };
 
