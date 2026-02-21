@@ -1,26 +1,24 @@
 import { useCallback, useState } from 'react';
-import { DnDProvider } from './dnd';
 import { useSortable } from './use-sortable';
 import { assert } from './assert';
-import { App2 } from './app2';
 
 const Item = ({ id, label }: { id: string; label: string }) => {
-  const { ref, isDragging } = useSortable(id, {
-    type: 'item',
-    accept: ['item'],
-    priority: 1,
-  });
+  // const { ref, isDragging } = useSortable(id, {
+  //   type: 'item',
+  //   accept: ['item'],
+  //   priority: 1,
+  // });
 
   return (
     <div
-      ref={ref}
+      // ref={ref}
       style={{
         userSelect: 'none',
         border: '1px solid yellow',
         background: 'cyan',
         padding: 10,
         minWidth: 100,
-        opacity: isDragging ? 0.5 : 1,
+        // opacity: isDragging ? 0.5 : 1,
       }}
     >
       {label}
@@ -37,12 +35,12 @@ const Column = ({
   label: string;
   items: { id: string; label: string }[];
 }) => {
-  const { ref, isDragging } = useSortable(id, {
-    type: 'column',
-    accept: ['column', 'item'],
-    priority: 0,
-    items,
-  });
+  // const { ref, isDragging } = useSortable(id, {
+  //   type: 'column',
+  //   accept: ['column', 'item'],
+  //   priority: 0,
+  //   items,
+  // });
 
   return (
     <div
@@ -53,12 +51,12 @@ const Column = ({
         paddingBottom: 100,
         border: '1px solid red',
         background: 'fuchsia',
-        opacity: isDragging ? 0.5 : 1,
+        // opacity: isDragging ? 0.5 : 1,
         display: 'flex',
         flexDirection: 'column',
         gap: 5,
       }}
-      ref={ref}
+      // ref={ref}
     >
       {label}
       {items.map((item) => (
@@ -86,7 +84,7 @@ const genColumn = () => ({
 });
 
 const items2 = [genColumn(), genColumn(), genColumn(), genColumn()];
-export const App = () => {
+export const App2 = () => {
   const [state, setState] = useState(items2);
 
   const handleDragOver = useCallback(
@@ -176,27 +174,18 @@ export const App = () => {
   );
 
   return (
-    <>
-      <DnDProvider onDragOver={handleDragOver}>
-        <div
-          style={{
-            paddingTop: 20,
-            display: 'flex',
-            gap: 10,
-            justifyContent: 'stretch',
-          }}
-        >
-          {state.map(({ id, items, label }) => (
-            <Column id={id} key={id} items={items} label={label} />
-          ))}
-        </div>
-      </DnDProvider>
-      <br />
-      <br />
-      <br />
-      <br />
-      <App2 />
-    </>
+    <div
+      style={{
+        paddingTop: 20,
+        display: 'flex',
+        gap: 10,
+        justifyContent: 'stretch',
+      }}
+    >
+      {state.map(({ id, items, label }) => (
+        <Column id={id} key={id} items={items} label={label} />
+      ))}
+    </div>
   );
 };
 

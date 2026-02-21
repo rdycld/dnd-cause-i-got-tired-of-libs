@@ -9,66 +9,8 @@ import {
 import { isPointerInRect } from './is-pointer-in-rect';
 import { calcDistanceBetweenRectMiddleAndPointer } from './calc-distance-between-rect-middle-and-pointer';
 import { drag } from './drag';
-
-export type Dragable = {
-  id: string;
-  type: string;
-  accept: string[];
-  priority: number;
-  items?: { id: string }[];
-  el: Element;
-};
-
-const createDndStore = () => {
-  const dragableItems = new Map<string, Dragable & { cleanup: VoidFunction }>();
-  let dragSource: Dragable | undefined;
-
-  const handleDrag = (e: MouseEvent, source: Dragable) => {
-    let target: Dragable | undefined;
-  };
-
-  const addDragable = (dragable: Dragable) => {
-    const exists = dragableItems.get(dragable.id);
-    exists?.cleanup();
-
-    const dragAbortController = new AbortController();
-    const { signal } = dragAbortController;
-
-    dragable.el.addEventListener(
-      'pointerdown',
-
-      (e) =>
-        drag(e, {
-          onBeforeDragStart: () => {
-            e.stopPropagation();
-          },
-          onDragStart: () => {
-            dragSource = dragable;
-          },
-          onDrag: (e) => handleDrag(e, dragable),
-          onDragEnd: () => {
-            dragSource = undefined;
-          },
-        }),
-      { signal },
-    );
-
-    const cleanup = () => {
-      dragableItems.delete(dragable.id);
-      dragAbortController.abort();
-    };
-
-    dragableItems.set(dragable.id, { ...dragable, cleanup });
-
-    return cleanup;
-  };
-
-  // todo sync with react
-  return {
-    addDragable,
-    dragSource,
-  };
-};
+import { assert } from './assert';
+import type { Dragable } from './dnd-store';
 
 //  react context <puke>
 type DnDCtx = {
@@ -120,7 +62,7 @@ export const DnDProvider = (props: {
         }
       }
 
-      if (!target) return;
+      assert(target);
 
       if (!target.items) {
         props.onDragOver({ source, target });
