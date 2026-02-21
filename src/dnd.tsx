@@ -4,13 +4,8 @@ import {
   useRef,
   useCallback,
   useMemo,
-  useEffect,
   useState,
 } from 'react';
-
-function assert(condition: unknown): asserts condition {
-  if (!condition) throw new Error();
-}
 
 type DnDCtx = {
   addDragable(dragable: Dragable): () => void;
@@ -25,23 +20,6 @@ export type Dragable = {
   type: string;
   accept: string[];
   el: Element;
-};
-
-export const move = (
-  ev: { source: Dragable; target: Dragable },
-  list: string[],
-) => {
-  const sourceIdx = list.indexOf(ev.source.id);
-  assert(sourceIdx !== -1);
-  const targetIdx = list.indexOf(ev.target.id);
-
-  if (sourceIdx === targetIdx) return list;
-
-  const copy = [...list];
-  const [removed] = copy.splice(sourceIdx, 1);
-  copy.splice(targetIdx, 0, removed);
-
-  return copy;
 };
 
 const isPointerInRect = (
@@ -202,40 +180,5 @@ export const useDndContext = () => {
   if (!ctx) throw new Error('xxx');
 
   return ctx;
-};
-
-export const useSortable = (
-  id: string,
-  options: {
-    type: string;
-    accept: string[];
-  },
-) => {
-  const dndCtx = useDndContext();
-
-  const cleanup = useRef(() => {});
-
-  useEffect(
-    () => () => {
-      cleanup.current();
-    },
-    [],
-  );
-
-  return {
-    isDragging: dndCtx.draggingId === id,
-    ref: useCallback(
-      (el: HTMLElement | null) => {
-        if (!el) return;
-
-        cleanup.current = dndCtx.addDragable({
-          ...options,
-          el,
-          id,
-        });
-      },
-      [dndCtx, id, options],
-    ),
-  };
 };
 

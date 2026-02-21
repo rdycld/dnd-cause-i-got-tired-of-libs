@@ -1,10 +1,12 @@
 import { useCallback, useState } from 'react';
-import { DnDProvider, move, useSortable } from './dnd';
+import { DnDProvider } from './dnd';
+import { useSortable } from './use-sortable';
+import { assert } from './assert';
 
-const Item = ({ id }: { id: string }) => {
+const Column = ({ id }: { id: string }) => {
   const { ref, isDragging } = useSortable(id, {
-    type: 'item',
-    accept: ['item'],
+    type: 'column',
+    accept: ['column'],
   });
 
   return (
@@ -23,12 +25,24 @@ const Item = ({ id }: { id: string }) => {
   );
 };
 
-const items = ['1', '2', '3', '4'];
+const items2 = [{ id: '1' }, { id: '2' }, { id: '3' }, { id: '4' }];
 export const App = () => {
-  const [state, setState] = useState(items);
+  const [state, setState] = useState(items2);
 
-  const handleDragOver = useCallback((ev) => {
-    setState((p) => move(ev, p));
+  const handleDragOver = useCallback((ev: any) => {
+    setState((p) => {
+      const sourceIdx = p.findIndex((el) => el.id === ev.source.id);
+      assert(sourceIdx !== -1);
+      const targetIdx = p.findIndex((el) => el.id === ev.target.id);
+
+      if (sourceIdx === targetIdx) return p;
+
+      const copy = Array.from(p);
+      const [removed] = copy.splice(sourceIdx, 1);
+      copy.splice(targetIdx, 0, removed);
+
+      return copy;
+    });
   }, []);
 
   return (
@@ -38,10 +52,11 @@ export const App = () => {
           style={{
             paddingTop: 20,
             display: 'flex',
+            gap: 10,
           }}
         >
-          {state.map((id) => (
-            <Item id={id} key={id} />
+          {state.map(({ id }) => (
+            <Column id={id} key={id} />
           ))}
         </div>
       </DnDProvider>
