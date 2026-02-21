@@ -86,7 +86,6 @@ export const findClosestItemTarget = (
     }
   }
 
-  assert(target);
   return target;
 };
 

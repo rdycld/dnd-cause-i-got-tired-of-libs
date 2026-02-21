@@ -177,7 +177,7 @@ export const App = () => {
 
   return (
     <>
-      <DnDProvider onDragOver={handleDragOver}>
+      {/* <DnDProvider onDragOver={handleDragOver}>
         <div
           style={{
             paddingTop: 20,
@@ -190,7 +190,7 @@ export const App = () => {
             <Column id={id} key={id} items={items} label={label} />
           ))}
         </div>
-      </DnDProvider>
+      </DnDProvider> */}
       <br />
       <br />
       <br />

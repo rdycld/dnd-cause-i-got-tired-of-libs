@@ -5,7 +5,7 @@ import {
   findIntersection,
 } from './utils';
 import { assert } from './assert';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 
 export type Dragable = {
   id: string;
@@ -15,28 +15,64 @@ export type Dragable = {
   el: Element;
 };
 
-const createDndStore = () => {
+export const createDndStore = () => {
+  const listeners = new Set<VoidFunction>();
+
   const dragableItems = new Map<string, Dragable & { cleanup: VoidFunction }>();
-  let dragSource: Dragable | undefined;
+
+  const snapshot: {
+    dragSource: Dragable | undefined;
+    target: Dragable | undefined;
+  } = {
+    dragSource: undefined,
+    target: undefined,
+  };
+
+  const getSnapshot = () => {
+    return snapshot;
+  };
+
+  const emit = () => {
+    for (const l of listeners) {
+      l();
+    }
+  };
+
+  const subscribe = (listener: VoidFunction) => {
+    listeners.add(listener);
+
+    return () => {
+      listeners.delete(listener);
+    };
+  };
 
   const handleDrag = (e: MouseEvent, source: Dragable) => {
-    let target: Dragable | undefined;
+    snapshot.target = findIntersection(e, source, dragableItems.values());
 
-    target = findIntersection(e, source, dragableItems.values());
-
-    if (!target) {
-      target = findClosestTarget(e, source, dragableItems.values());
-      assert(target);
+    if (!snapshot.target) {
+      snapshot.target = findClosestTarget(e, source, dragableItems.values());
+      assert(snapshot.target);
     }
 
-    if (!target.items) {
-      //todo emit onDragOver
+    if (!snapshot.target.items) {
+      emit();
+      return;
     }
-    assert(target.items);
 
-    target = findClosestItemTarget(e, source, target.items, dragableItems);
+    assert(snapshot.target.items);
 
-    //todo emit onDragOver
+    const itemTarget = findClosestItemTarget(
+      e,
+      source,
+      snapshot.target.items,
+      dragableItems,
+    );
+
+    if (itemTarget) {
+      snapshot.target = itemTarget;
+    }
+
+    emit();
   };
 
   const addDragable = (dragable: Dragable) => {
@@ -54,11 +90,14 @@ const createDndStore = () => {
             e.stopPropagation();
           },
           onDragStart: () => {
-            dragSource = dragable;
+            snapshot.dragSource = dragable;
+            emit();
           },
           onDrag: (e) => handleDrag(e, dragable),
           onDragEnd: () => {
-            dragSource = undefined;
+            snapshot.dragSource = undefined;
+            snapshot.target = undefined;
+            emit();
           },
         }),
       { signal },
@@ -74,21 +113,47 @@ const createDndStore = () => {
     return cleanup;
   };
 
+  const useMonitor = () => {
+    const lastSnapshot = useRef({ ...getSnapshot() });
+
+    return useSyncExternalStore(
+      (onStoreChange) => {
+        const f = () => {
+          const prev = lastSnapshot.current;
+          const next = getSnapshot();
+
+          if (
+            prev.dragSource?.id !== next.dragSource?.id ||
+            prev.target?.id !== next.target?.id
+          ) {
+            lastSnapshot.current = { ...next };
+            onStoreChange();
+          }
+        };
+
+        const unsb = subscribe(f);
+        return () => {
+          unsb();
+        };
+      },
+      () => lastSnapshot.current,
+    );
+  };
+
   const useSortable = (
     id: string,
     config: Pick<Dragable, 'type' | 'accept' | 'items'>,
   ) => {
-    const cleanup = useRef(() => {});
-
-    useEffect(
-      () => () => {
-        cleanup.current();
-      },
-      [],
+    const isDragging = useSyncExternalStore(
+      subscribe,
+      () => getSnapshot().dragSource?.id === id,
     );
 
+    const cleanup = useRef(() => {});
+    useEffect(() => () => cleanup.current(), []);
+
     return {
-      isDragging: dragSource?.id === id,
+      isDragging,
       ref: useCallback(
         (el: HTMLElement | null) => {
           if (!el) return;
@@ -104,7 +169,6 @@ const createDndStore = () => {
     };
   };
 
-  // todo sync with react
-  return { useSortable };
+  return { useSortable, useMonitor };
 };
 

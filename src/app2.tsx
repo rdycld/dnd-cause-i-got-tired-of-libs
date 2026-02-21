@@ -1,70 +1,72 @@
-import { useCallback, useState } from 'react';
-import { useSortable } from './use-sortable';
+import { memo, useEffect, useState } from 'react';
 import { assert } from './assert';
+import { createDndStore } from './dnd-store';
 
-const Item = ({ id, label }: { id: string; label: string }) => {
-  // const { ref, isDragging } = useSortable(id, {
-  //   type: 'item',
-  //   accept: ['item'],
-  //   priority: 1,
-  // });
+const { useMonitor, useSortable } = createDndStore();
+
+const Item = memo(({ id, label }: { id: string; label: string }) => {
+  const { ref, isDragging } = useSortable(id, {
+    type: 'item',
+    accept: ['item'],
+  });
 
   return (
     <div
-      // ref={ref}
+      ref={ref}
       style={{
         userSelect: 'none',
         border: '1px solid yellow',
         background: 'cyan',
         padding: 10,
         minWidth: 100,
-        // opacity: isDragging ? 0.5 : 1,
+        opacity: isDragging ? 0.5 : 1,
       }}
     >
       {label}
     </div>
   );
-};
+});
 
-const Column = ({
-  id,
-  items,
-  label,
-}: {
-  id: string;
-  label: string;
-  items: { id: string; label: string }[];
-}) => {
-  // const { ref, isDragging } = useSortable(id, {
-  //   type: 'column',
-  //   accept: ['column', 'item'],
-  //   priority: 0,
-  //   items,
-  // });
+const Column = memo(
+  ({
+    id,
+    items,
+    label,
+  }: {
+    id: string;
+    label: string;
+    items: { id: string; label: string }[];
+  }) => {
+    const { ref, isDragging } = useSortable(id, {
+      type: 'column',
+      accept: ['column', 'item'],
+      items,
+    });
 
-  return (
-    <div
-      style={{
-        userSelect: 'none',
-        padding: 10,
-        minWidth: 150,
-        paddingBottom: 100,
-        border: '1px solid red',
-        background: 'fuchsia',
-        // opacity: isDragging ? 0.5 : 1,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 5,
-      }}
-      // ref={ref}
-    >
-      {label}
-      {items.map((item) => (
-        <Item key={item.id} id={item.id} label={item.label} />
-      ))}
-    </div>
-  );
-};
+    return (
+      <div
+        style={{
+          userSelect: 'none',
+          padding: 10,
+          minWidth: 150,
+          paddingBottom: 100,
+          border: '1px solid red',
+          background: 'fuchsia',
+          opacity: isDragging ? 0.5 : 1,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 5,
+        }}
+        ref={ref}
+      >
+        {label}
+        {items.map((item) => (
+          <Item key={item.id} id={item.id} label={item.label} />
+        ))}
+      </div>
+    );
+  },
+);
 
 const genNextLabel = (() => {
   let label = 0;
@@ -87,91 +89,83 @@ const items2 = [genColumn(), genColumn(), genColumn(), genColumn()];
 export const App2 = () => {
   const [state, setState] = useState(items2);
 
-  const handleDragOver = useCallback(
-    (event: {
-      source: { type: string; id: string };
-      target: { type: string; id: string };
-    }) => {
-      const { source, target } = event;
+  const xxx = useMonitor();
 
-      if (source.type === 'column') {
-        setState((p) => {
-          // move in array
-          const sourceIdx = p.findIndex((el) => el.id === source.id);
-          assert(sourceIdx !== -1);
-          const targetIdx = p.findIndex((el) => el.id === target.id);
+  useEffect(() => {
+    const { dragSource: source, target } = xxx;
+    if (!(source && target)) return;
 
-          if (sourceIdx === targetIdx) return p;
+    if (source.type === 'column') {
+      setState((p) => {
+        // move in array
+        const sourceIdx = p.findIndex((el) => el.id === source.id);
+        assert(sourceIdx !== -1);
+        const targetIdx = p.findIndex((el) => el.id === target.id);
 
-          const copy = Array.from(p);
-          const [removed] = copy.splice(sourceIdx, 1);
-          copy.splice(targetIdx, 0, removed);
+        if (sourceIdx === targetIdx) return p;
 
-          return copy;
-          //end move in array
-        });
-        return;
+        const copy = Array.from(p);
+        const [removed] = copy.splice(sourceIdx, 1);
+        copy.splice(targetIdx, 0, removed);
+
+        return copy;
+      });
+      return;
+    }
+
+    setState((p) => {
+      const sourceCol = p.find((col) =>
+        col.items.some((el) => el.id === source.id),
+      );
+      assert(sourceCol);
+
+      // here handle adding to an empty column
+      let targetCol = p.find((col) =>
+        col.items.some((el) => el.id === target.id),
+      );
+
+      if (!targetCol) {
+        targetCol = p.find((col) => col.id === target.id);
+        assert(targetCol);
       }
 
-      setState((p) => {
-        const sourceCol = p.find((col) =>
-          col.items.some((el) => el.id === source.id),
-        );
-        assert(sourceCol);
+      const sourceIdx = sourceCol.items.findIndex((el) => el.id === source.id);
+      assert(sourceIdx !== -1);
+      const targetIdx = targetCol.items.findIndex((el) => el.id === target.id);
 
-        // here handle adding to an empty column
-        let targetCol = p.find((col) =>
-          col.items.some((el) => el.id === target.id),
-        );
+      //nothing changed, not at all
+      if (sourceCol === targetCol && sourceIdx === targetIdx) return p;
 
-        if (!targetCol) {
-          targetCol = p.find((col) => col.id === target.id);
-          assert(targetCol);
-        }
+      const sourceCopy = Array.from(sourceCol.items);
+      const targetCopy = Array.from(targetCol.items);
 
-        const sourceIdx = sourceCol.items.findIndex(
-          (el) => el.id === source.id,
-        );
-        assert(sourceIdx !== -1);
-        const targetIdx = targetCol.items.findIndex(
-          (el) => el.id === target.id,
-        );
+      const [removed] = sourceCopy.splice(sourceIdx, 1);
 
-        //nothing changed, not at all
-        if (sourceCol === targetCol && sourceIdx === targetIdx) return p;
+      const updatedSourceCol = {
+        ...sourceCol,
+        items: sourceCopy,
+      };
 
-        const sourceCopy = Array.from(sourceCol.items);
-        const targetCopy = Array.from(targetCol.items);
+      if (sourceCol === targetCol) {
+        sourceCopy.splice(targetIdx, 0, removed);
+      } else {
+        targetCopy.splice(targetIdx, 0, removed);
+      }
 
-        const [removed] = sourceCopy.splice(sourceIdx, 1);
+      const updatedTargetCol = {
+        ...targetCol,
+        items: targetCopy,
+      };
 
-        const updatedSourceCol = {
-          ...sourceCol,
-          items: sourceCopy,
-        };
-
-        if (sourceCol === targetCol) {
-          sourceCopy.splice(targetIdx, 0, removed);
-        } else {
-          targetCopy.splice(targetIdx, 0, removed);
-        }
-
-        const updatedTargetCol = {
-          ...targetCol,
-          items: targetCopy,
-        };
-
-        return p.map((el) =>
-          el.id === updatedSourceCol.id
-            ? updatedSourceCol
-            : el.id === updatedTargetCol.id
-            ? updatedTargetCol
-            : el,
-        );
-      });
-    },
-    [],
-  );
+      return p.map((el) =>
+        el.id === updatedSourceCol.id
+          ? updatedSourceCol
+          : el.id === updatedTargetCol.id
+          ? updatedTargetCol
+          : el,
+      );
+    });
+  }, [xxx]);
 
   return (
     <div
