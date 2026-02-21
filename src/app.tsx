@@ -46,7 +46,7 @@ const Column = ({
   return (
     <div
       style={{
-        height: `fit-content`,
+        userSelect: 'none',
         padding: 10,
         minWidth: 150,
         paddingBottom: 100,
@@ -182,6 +182,7 @@ export const App = () => {
             paddingTop: 20,
             display: 'flex',
             gap: 10,
+            justifyContent: 'stretch',
           }}
         >
           {state.map(({ id, items, label }) => (
