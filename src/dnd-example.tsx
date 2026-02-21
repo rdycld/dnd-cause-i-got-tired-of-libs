@@ -137,9 +137,7 @@ export const DnDExample = () => {
           (el) => el.id === source.id,
         );
         assert(sourceIdx !== -1);
-        const targetIdx = targetCol.items.findIndex(
-          (el) => el.id === target.id,
-        );
+        let targetIdx = targetCol.items.findIndex((el) => el.id === target.id);
 
         //nothing changed, not at all
         if (sourceCol === targetCol && sourceIdx === targetIdx) return p;
@@ -157,6 +155,9 @@ export const DnDExample = () => {
         if (sourceCol === targetCol) {
           sourceCopy.splice(targetIdx, 0, removed);
         } else {
+          targetIdx =
+            targetIdx === targetCopy.length - 1 ? targetIdx + 1 : targetIdx;
+
           targetCopy.splice(targetIdx, 0, removed);
         }
 
