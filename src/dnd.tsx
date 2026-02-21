@@ -10,14 +10,6 @@ import { isPointerInRect } from './is-pointer-in-rect';
 import { calcDistanceBetweenRectMiddleAndPointer } from './calc-distance-between-rect-middle-and-pointer';
 import { drag } from './drag';
 
-type DnDCtx = {
-  addDragable(dragable: Dragable): () => void;
-  removeDragable(dragable: Dragable): void;
-  draggingId: string | undefined;
-};
-
-const dndContext = createContext<DnDCtx | null>(null);
-
 export type Dragable = {
   id: string;
   type: string;
@@ -26,6 +18,65 @@ export type Dragable = {
   items?: { id: string }[];
   el: Element;
 };
+
+const createDndStore = () => {
+  const dragableItems = new Map<string, Dragable & { cleanup: VoidFunction }>();
+  let dragSource: Dragable | undefined;
+
+  const handleDrag = (e: MouseEvent, source: Dragable) => {
+    let target: Dragable | undefined;
+  };
+
+  const addDragable = (dragable: Dragable) => {
+    const exists = dragableItems.get(dragable.id);
+    exists?.cleanup();
+
+    const dragAbortController = new AbortController();
+    const { signal } = dragAbortController;
+
+    dragable.el.addEventListener(
+      'pointerdown',
+
+      (e) =>
+        drag(e, {
+          onBeforeDragStart: () => {
+            e.stopPropagation();
+          },
+          onDragStart: () => {
+            dragSource = dragable;
+          },
+          onDrag: (e) => handleDrag(e, dragable),
+          onDragEnd: () => {
+            dragSource = undefined;
+          },
+        }),
+      { signal },
+    );
+
+    const cleanup = () => {
+      dragableItems.delete(dragable.id);
+      dragAbortController.abort();
+    };
+
+    dragableItems.set(dragable.id, { ...dragable, cleanup });
+
+    return cleanup;
+  };
+
+  // todo sync with react
+  return {
+    addDragable,
+    dragSource,
+  };
+};
+
+//  react context <puke>
+type DnDCtx = {
+  addDragable(dragable: Dragable): () => void;
+  draggingId: string | undefined;
+};
+
+const dndContext = createContext<DnDCtx | null>(null);
 
 export const DnDProvider = (props: {
   children: React.ReactNode;
@@ -109,20 +160,28 @@ export const DnDProvider = (props: {
       const exists = dragables.current.get(dragable.id);
       exists?.cleanup();
 
-      const f = (e: Event) => {
-        e.stopPropagation();
+      const dragAbortController = new AbortController();
+      const { signal } = dragAbortController;
 
-        return drag(e, {
-          onDragStart: () => setDraggingId(dragable.id),
-          onDrag: (e) => handleOnDrag(e, dragable),
-          onDragEnd: () => setDraggingId(undefined),
-        });
-      };
-      dragable.el.addEventListener('pointerdown', f);
+      dragable.el.addEventListener(
+        'pointerdown',
+        (e) =>
+          drag(e, {
+            onBeforeDragStart: () => {
+              e.stopPropagation();
+            },
+            onDragStart: () => {
+              setDraggingId(dragable.id);
+            },
+            onDrag: (ev) => handleOnDrag(ev, dragable),
+            onDragEnd: () => setDraggingId(undefined),
+          }),
+        { signal },
+      );
 
       const cleanup = () => {
         dragables.current.delete(dragable.id);
-        dragable.el.removeEventListener('pointerdown', f);
+        dragAbortController.abort();
       };
 
       dragables.current.set(dragable.id, { ...dragable, cleanup });
@@ -132,19 +191,11 @@ export const DnDProvider = (props: {
     [handleOnDrag],
   );
 
-  const removeDragable = useCallback((dragable: Dragable) => {
-    if (typeof dragable === 'string') {
-      dragables.current.delete(dragable);
-    } else {
-      dragables.current.delete(dragable.id);
-    }
-  }, []);
-
   return (
     <dndContext.Provider
       value={useMemo(
-        () => ({ addDragable, removeDragable, draggingId }),
-        [addDragable, draggingId, removeDragable],
+        () => ({ addDragable, draggingId }),
+        [addDragable, draggingId],
       )}
     >
       {props.children}
@@ -152,6 +203,7 @@ export const DnDProvider = (props: {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useDndContext = () => {
   const ctx = useContext(dndContext);
   if (!ctx) throw new Error('xxx');

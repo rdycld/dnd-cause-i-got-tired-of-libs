@@ -1,12 +1,14 @@
 export const drag = (
   e: Event,
   options: {
+    onBeforeDragStart?: () => void;
     onDragStart?: (e: Event) => void;
     onDrag?: (event: MouseEvent) => void;
     onDragEnd?: (event: MouseEvent) => void;
   } = {},
 ) => {
   if (!(e.currentTarget instanceof Element) || !e.currentTarget) return;
+  options.onBeforeDragStart?.();
 
   let dragging = false;
   let cleaned = false;
