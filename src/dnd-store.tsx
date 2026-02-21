@@ -161,6 +161,7 @@ export const createDndStore = () => {
       isDragging,
       ref: useCallback(
         (el: HTMLElement | null) => {
+          cleanup.current();
           if (!el) return;
 
           cleanup.current = addDragable({
