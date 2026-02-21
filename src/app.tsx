@@ -3,47 +3,176 @@ import { DnDProvider } from './dnd';
 import { useSortable } from './use-sortable';
 import { assert } from './assert';
 
-const Column = ({ id }: { id: string }) => {
+const Item = ({ id, label }: { id: string; label: string }) => {
+  const { ref, isDragging } = useSortable(id, {
+    type: 'item',
+    accept: ['item'],
+    priority: 1,
+  });
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        userSelect: 'none',
+        border: '1px solid yellow',
+        background: 'cyan',
+        padding: 10,
+        minWidth: 100,
+        opacity: isDragging ? 0.5 : 1,
+      }}
+    >
+      {label}
+    </div>
+  );
+};
+
+const Column = ({
+  id,
+  items,
+  label,
+}: {
+  id: string;
+  label: string;
+  items: { id: string; label: string }[];
+}) => {
   const { ref, isDragging } = useSortable(id, {
     type: 'column',
-    accept: ['column'],
+    accept: ['column', 'item'],
+    priority: 0,
+    items,
   });
 
   return (
     <div
       style={{
+        height: `fit-content`,
         padding: 10,
+        minWidth: 150,
+        paddingBottom: 100,
         border: '1px solid red',
-        background: 'red',
+        background: 'fuchsia',
         opacity: isDragging ? 0.5 : 1,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 5,
       }}
-      draggable
       ref={ref}
     >
-      hellooo - {id}
+      {label}
+      {items.map((item) => (
+        <Item key={item.id} id={item.id} label={item.label} />
+      ))}
     </div>
   );
 };
 
-const items2 = [{ id: '1' }, { id: '2' }, { id: '3' }, { id: '4' }];
+const genNextLabel = (() => {
+  let label = 0;
+
+  return (suffix = '') => `${++label}-${suffix}`;
+})();
+
+const genItem = () => ({
+  id: crypto.randomUUID(),
+  label: genNextLabel('item'),
+});
+
+const genColumn = () => ({
+  id: crypto.randomUUID(),
+  label: genNextLabel('column'),
+  items: [genItem(), genItem(), genItem()],
+});
+
+const items2 = [genColumn(), genColumn(), genColumn(), genColumn()];
 export const App = () => {
   const [state, setState] = useState(items2);
 
-  const handleDragOver = useCallback((ev: any) => {
-    setState((p) => {
-      const sourceIdx = p.findIndex((el) => el.id === ev.source.id);
-      assert(sourceIdx !== -1);
-      const targetIdx = p.findIndex((el) => el.id === ev.target.id);
+  const handleDragOver = useCallback(
+    (event: {
+      source: { type: string; id: string };
+      target: { type: string; id: string };
+    }) => {
+      const { source, target } = event;
 
-      if (sourceIdx === targetIdx) return p;
+      if (source.type === 'column') {
+        setState((p) => {
+          // move in array
+          const sourceIdx = p.findIndex((el) => el.id === source.id);
+          assert(sourceIdx !== -1);
+          const targetIdx = p.findIndex((el) => el.id === target.id);
 
-      const copy = Array.from(p);
-      const [removed] = copy.splice(sourceIdx, 1);
-      copy.splice(targetIdx, 0, removed);
+          if (sourceIdx === targetIdx) return p;
 
-      return copy;
-    });
-  }, []);
+          const copy = Array.from(p);
+          const [removed] = copy.splice(sourceIdx, 1);
+          copy.splice(targetIdx, 0, removed);
+
+          return copy;
+          //end move in array
+        });
+        return;
+      }
+
+      setState((p) => {
+        const sourceCol = p.find((col) =>
+          col.items.some((el) => el.id === source.id),
+        );
+        assert(sourceCol);
+
+        // here handle adding to an empty column
+        let targetCol = p.find((col) =>
+          col.items.some((el) => el.id === target.id),
+        );
+
+        if (!targetCol) {
+          targetCol = p.find((col) => col.id === target.id);
+          assert(targetCol);
+        }
+
+        const sourceIdx = sourceCol.items.findIndex(
+          (el) => el.id === source.id,
+        );
+        assert(sourceIdx !== -1);
+        const targetIdx = targetCol.items.findIndex(
+          (el) => el.id === target.id,
+        );
+
+        //nothing changed, not at all
+        if (sourceCol === targetCol && sourceIdx === targetIdx) return p;
+
+        const sourceCopy = Array.from(sourceCol.items);
+        const targetCopy = Array.from(targetCol.items);
+
+        const [removed] = sourceCopy.splice(sourceIdx, 1);
+
+        const updatedSourceCol = {
+          ...sourceCol,
+          items: sourceCopy,
+        };
+
+        if (sourceCol === targetCol) {
+          sourceCopy.splice(targetIdx, 0, removed);
+        } else {
+          targetCopy.splice(targetIdx, 0, removed);
+        }
+
+        const updatedTargetCol = {
+          ...targetCol,
+          items: targetCopy,
+        };
+
+        return p.map((el) =>
+          el.id === updatedSourceCol.id
+            ? updatedSourceCol
+            : el.id === updatedTargetCol.id
+            ? updatedTargetCol
+            : el,
+        );
+      });
+    },
+    [],
+  );
 
   return (
     <>
@@ -55,8 +184,8 @@ export const App = () => {
             gap: 10,
           }}
         >
-          {state.map(({ id }) => (
-            <Column id={id} key={id} />
+          {state.map(({ id, items, label }) => (
+            <Column id={id} key={id} items={items} label={label} />
           ))}
         </div>
       </DnDProvider>

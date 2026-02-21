@@ -9,7 +9,7 @@ import {
 
 type DnDCtx = {
   addDragable(dragable: Dragable): () => void;
-  removeDragable(dragable: Dragable | string): void;
+  removeDragable(dragable: Dragable): void;
   draggingId: string | undefined;
 };
 
@@ -19,6 +19,8 @@ export type Dragable = {
   id: string;
   type: string;
   accept: string[];
+  priority: number;
+  items?: { id: string }[];
   el: Element;
 };
 
@@ -64,37 +66,35 @@ export const DnDProvider = (props: {
       style.innerHTML = `* { cursor:grabbing !important}`;
       document.head.appendChild(style);
 
-      document.documentElement.addEventListener('dragover', onDragOver);
-      document.documentElement.addEventListener('dragend', onDragEnd);
+      document.documentElement.addEventListener('pointermove', onDragOver);
+      document.documentElement.addEventListener('pointerup', onDragEnd);
       setDraggingId(source.id);
 
-      function onDragOver(event: DragEvent) {
+      function onDragOver(event: MouseEvent) {
         event.preventDefault();
         if (!dragging) {
           dragging = true;
         }
 
-        let target = source;
-        let intersectionFound = false;
+        let target: Dragable | undefined;
 
         // find intersections
         for (const dragable of dragables.current.values()) {
-          const isPointerInside = isPointerInRect(
-            dragable.el.getBoundingClientRect(),
-            event,
-          );
+          if (!dragable.accept.includes(source.type)) continue;
 
-          if (isPointerInside) {
-            intersectionFound = true;
+          if (isPointerInRect(dragable.el.getBoundingClientRect(), event)) {
             target = dragable;
+            break;
           }
         }
 
         // find closest slot
-        if (!intersectionFound) {
+        if (!target) {
           let distance = Number.POSITIVE_INFINITY;
 
           for (const dragable of dragables.current.values()) {
+            if (!dragable.accept.includes(source.type)) continue;
+
             const dist = calcDistBetweenRectMiddleAndPointer(
               dragable.el.getBoundingClientRect(),
               event,
@@ -107,7 +107,37 @@ export const DnDProvider = (props: {
           }
         }
 
-        if (target !== source) props.onDragOver({ source, target });
+        if (!target) return;
+
+        if (!target.items) {
+          props.onDragOver({ source, target });
+          return;
+        }
+
+        let distance = Number.POSITIVE_INFINITY;
+        for (const { id } of target.items) {
+          const item = dragables.current.get(id);
+
+          if (!item) continue;
+          if (!item.accept.includes(source.type)) continue;
+
+          if (isPointerInRect(item.el.getBoundingClientRect(), event)) {
+            target = item;
+            break;
+          } else {
+            const dist = calcDistBetweenRectMiddleAndPointer(
+              item.el.getBoundingClientRect(),
+              event,
+            );
+
+            if (dist < distance) {
+              target = item;
+              distance = dist;
+            }
+          }
+        }
+
+        props.onDragOver({ source, target });
       }
 
       function onDragEnd() {
@@ -126,8 +156,8 @@ export const DnDProvider = (props: {
           dragging = false;
         }
 
-        document.documentElement.removeEventListener('dragover', onDragOver);
-        document.documentElement.removeEventListener('dragend', onDragEnd);
+        document.documentElement.removeEventListener('pointermove', onDragOver);
+        document.documentElement.removeEventListener('pointerup', onDragEnd);
       }
     },
     [props],
@@ -139,13 +169,15 @@ export const DnDProvider = (props: {
       exists?.cleanup();
 
       const f = (e: Event) => {
+        e.stopPropagation();
+
         return drag(e, dragable);
       };
-      dragable.el.addEventListener('dragstart', f);
+      dragable.el.addEventListener('pointerdown', f);
 
       const cleanup = () => {
         dragables.current.delete(dragable.id);
-        dragable.el.removeEventListener('dragstart', f);
+        dragable.el.removeEventListener('pointerdown', f);
       };
 
       dragables.current.set(dragable.id, { ...dragable, cleanup });
@@ -155,7 +187,7 @@ export const DnDProvider = (props: {
     [drag],
   );
 
-  const removeDragable = useCallback((dragable: Dragable | string) => {
+  const removeDragable = useCallback((dragable: Dragable) => {
     if (typeof dragable === 'string') {
       dragables.current.delete(dragable);
     } else {

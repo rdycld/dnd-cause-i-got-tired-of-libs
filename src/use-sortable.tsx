@@ -6,6 +6,8 @@ export const useSortable = (
   options: {
     type: string;
     accept: string[];
+    priority: number;
+    items?: { id: string }[];
   },
 ) => {
   const dndCtx = useDndContext();
