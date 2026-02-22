@@ -2,7 +2,7 @@ import { drag } from './drag';
 import {
   findClosestItemTarget,
   findClosestTarget,
-  handleDifferentHeights,
+  handleDifferentDimensions,
 } from './utils';
 import { assert } from './assert';
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
@@ -10,10 +10,10 @@ import { addDebugLines } from './debug';
 
 export type Dragable = {
   id: string;
-  type: string;
-  accept: string[];
+  type: 'parent' | 'child';
+  accept: ('parent' | 'child')[];
   items?: { id: string }[];
-  el: Element;
+  el: HTMLElement;
 };
 
 type DragState = {
@@ -103,8 +103,18 @@ export const createDndStore = (
     assert(nextTarget);
 
     if (!nextTarget.items) {
-      nextTarget = handleDifferentHeights(e, source, nextTarget);
+      nextTarget = handleDifferentDimensions(e, source, nextTarget);
       updateSnapshotAndEmitIfNeeded_mutable({ target: nextTarget });
+      return;
+    }
+
+    if (
+      !nextTarget.items.find((el) => el.id === source.id) &&
+      source.type === 'child'
+    ) {
+      updateSnapshotAndEmitIfNeeded_mutable({
+        target: nextTarget,
+      });
       return;
     }
 
@@ -119,7 +129,7 @@ export const createDndStore = (
       nextTarget = itemTarget;
     }
 
-    nextTarget = handleDifferentHeights(e, source, nextTarget);
+    nextTarget = handleDifferentDimensions(e, source, nextTarget);
     updateSnapshotAndEmitIfNeeded_mutable({
       target: nextTarget,
     });

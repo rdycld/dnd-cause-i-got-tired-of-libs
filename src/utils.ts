@@ -63,7 +63,7 @@ export const findClosestItemTarget = (
   return target;
 };
 
-export const handleDifferentHeights = (
+const handleDifferentHeights = (
   e: MouseEvent,
   source: Dragable,
   nextTarget: Dragable,
@@ -83,5 +83,42 @@ export const handleDifferentHeights = (
       : [source, nextTarget];
 
   return isOverThreshold ? overThresholdDragable : underThresholdDragable;
+};
+
+const handleDifferentWidths = (
+  e: MouseEvent,
+  source: Dragable,
+  nextTarget: Dragable,
+) => {
+  const sourceRect = source.el.getBoundingClientRect();
+  const nextTargetRect = nextTarget.el.getBoundingClientRect();
+
+  if (sourceRect.width === nextTargetRect.width) return nextTarget;
+
+  const left = Math.min(sourceRect.left, nextTargetRect.left);
+  const threshold = left + (sourceRect.width + nextTargetRect.width) / 2;
+  const isOverThreshold = e.clientX > threshold;
+
+  const [underThresholdDragable, overThresholdDragable] =
+    sourceRect.top > nextTargetRect.top
+      ? [nextTarget, source]
+      : [source, nextTarget];
+
+  return isOverThreshold ? overThresholdDragable : underThresholdDragable;
+};
+
+export const handleDifferentDimensions = (
+  e: MouseEvent,
+  source: Dragable,
+  nextTarget: Dragable,
+) => {
+  if (source.type !== nextTarget.type) return nextTarget;
+
+  const sourceRect = source.el.getBoundingClientRect();
+  const nextTargetRect = nextTarget.el.getBoundingClientRect();
+
+  if (sourceRect.top !== nextTargetRect.top)
+    return handleDifferentHeights(e, source, nextTarget);
+  else return handleDifferentWidths(e, source, nextTarget);
 };
 

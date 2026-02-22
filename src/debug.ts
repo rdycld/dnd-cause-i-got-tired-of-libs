@@ -46,15 +46,15 @@ export const addDebugLines = (
     }
   }
 
-  //todo
-  // lines
-  //   .sort((a, b) => {
-  //     const { width: aW } = a.getBoundingClientRect();
-  //     const { width: bW } = b.getBoundingClientRect();
+  lines
+    .sort((a, b) => {
+      const aw = a.style.getPropertyValue('width');
+      const bw = b.style.getPropertyValue('width');
 
-  //     return aW - bW;
-  //   })
-  //   .splice(5);
+      return parseFloat(aw) - parseFloat(bw);
+    })
+    .splice(5);
+
   shortest?.style.setProperty('background', 'red');
 
   for (const l of lines) {

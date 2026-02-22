@@ -7,8 +7,8 @@ const { useMonitor, useSortable } = createDndStore();
 
 const Item = memo(({ id, label }: { id: string; label: string }) => {
   const { ref, isDragging } = useSortable(id, {
-    type: 'item',
-    accept: ['item'],
+    type: 'child',
+    accept: ['child'],
   });
 
   return (

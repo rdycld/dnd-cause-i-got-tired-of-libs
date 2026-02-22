@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useDndContext } from './dnd';
+import type { Dragable } from './dnd-store';
 
 export const useSortable = (
   id: string,
-  options: {
-    type: string;
-    accept: string[];
-    priority: number;
+  options: Pick<Dragable, 'type' | 'accept'> & {
     items?: { id: string }[];
   },
 ) => {

@@ -7,8 +7,8 @@ const { useMonitor, useSortable } = createDndStore();
 
 const Item = memo(({ id, label }: { id: string; label: string }) => {
   const { ref, isDragging } = useSortable(id, {
-    type: 'item',
-    accept: ['item'],
+    type: 'child',
+    accept: ['child'],
   });
 
   return (
@@ -39,8 +39,8 @@ const Column = memo(
     items: { id: string; label: string }[];
   }) => {
     const { ref, isDragging } = useSortable(id, {
-      type: 'column',
-      accept: ['column', 'item'],
+      type: 'parent',
+      accept: ['parent', 'child'],
       items,
     });
 
@@ -53,7 +53,6 @@ const Column = memo(
             userSelect: 'none',
             padding: 10,
             minWidth: 150,
-            paddingBottom: 100,
             border: '1px solid red',
             background: 'fuchsia',
             opacity: isDragging ? 0.5 : 1,
@@ -86,7 +85,7 @@ export const DnDExampleNestedGrid = () => {
     }) => {
       if (!(source && target)) return;
 
-      if (source.type === 'column') {
+      if (source.type === 'parent') {
         setState((p) => {
           // move in array
           const sourceIdx = p.findIndex((el) => el.id === source.id);

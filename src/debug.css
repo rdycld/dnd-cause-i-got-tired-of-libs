@@ -1,6 +1,6 @@
-.debug-line::after{
+.debug-line::after {
   z-index: 9999;
-  content: attr(data-length); 
+  content: attr(data-length);
   position: absolute;
   top: 0;
   left: 50%;
