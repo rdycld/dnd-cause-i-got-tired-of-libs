@@ -1,12 +1,12 @@
 import { drag } from './drag';
 import {
-  addDebugLines,
   findClosestItemTarget,
   findClosestTarget,
   handleDifferentHeights,
 } from './utils';
 import { assert } from './assert';
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
+import { addDebugLines } from './debug';
 
 export type Dragable = {
   id: string;
