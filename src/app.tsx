@@ -36,6 +36,9 @@ export const App = () => {
   return (
     <div>
       <div style={{ display: 'flex', gap: 20 }}>
+        <a href='https://github.com/rdycld/dnd-cause-i-got-tired-of-libs'>
+          source code
+        </a>
         <label>
           vertical list
           <input
