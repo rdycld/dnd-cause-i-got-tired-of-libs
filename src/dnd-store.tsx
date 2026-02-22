@@ -1,9 +1,5 @@
 import { drag } from './drag';
-import {
-  findClosestItemTarget,
-  findClosestTarget,
-  findIntersection,
-} from './utils';
+import { findClosestItemTarget, findClosestTarget } from './utils';
 import { assert } from './assert';
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 
@@ -15,16 +11,35 @@ export type Dragable = {
   el: Element;
 };
 
+type DragState = {
+  dragSource: Dragable | undefined;
+  target: Dragable | undefined;
+};
+
 export const createDndStore = () => {
   const listeners = new Set<VoidFunction>();
   const dragableItems = new Map<string, Dragable & { cleanup: VoidFunction }>();
 
-  const snapshot: {
-    dragSource: Dragable | undefined;
-    target: Dragable | undefined;
-  } = {
+  let snapshot: DragState = {
     dragSource: undefined,
     target: undefined,
+  };
+
+  const updateSnapshotAndEmitIfNeeded_mutable = (
+    newState: Partial<DragState>,
+  ) => {
+    let same = true;
+
+    for (const [k, v] of Object.entries(newState)) {
+      same = Object.is(v, snapshot[k]);
+
+      if (!same) break;
+    }
+
+    if (!same) {
+      snapshot = { ...snapshot, ...newState };
+      emit();
+    }
   };
 
   const getSnapshot = () => {
@@ -46,32 +61,27 @@ export const createDndStore = () => {
   };
 
   const handleDrag = (e: MouseEvent, source: Dragable) => {
-    snapshot.target = findIntersection(e, source, dragableItems.values());
+    let nextTarget = findClosestTarget(e, source, dragableItems.values());
+    assert(nextTarget);
 
-    if (!snapshot.target) {
-      snapshot.target = findClosestTarget(e, source, dragableItems.values());
-      assert(snapshot.target);
-    }
-
-    if (!snapshot.target.items) {
-      emit();
+    if (!nextTarget.items) {
+      updateSnapshotAndEmitIfNeeded_mutable({ target: nextTarget });
       return;
     }
 
-    assert(snapshot.target.items);
+    assert(nextTarget.items);
 
     const itemTarget = findClosestItemTarget(
       e,
       source,
-      snapshot.target.items,
+      nextTarget.items,
       dragableItems,
     );
 
     if (itemTarget) {
-      snapshot.target = itemTarget;
+      nextTarget = itemTarget;
     }
-
-    emit();
+    updateSnapshotAndEmitIfNeeded_mutable({ target: nextTarget });
   };
 
   const addDragable = (dragable: Dragable) => {
@@ -112,37 +122,12 @@ export const createDndStore = () => {
     return cleanup;
   };
 
-  const useMonitor = (
-    onChange: (state: {
-      dragSource: Dragable | undefined;
-      target: Dragable | undefined;
-    }) => void,
-  ) => {
-    const lastSnapshot = useRef({ ...getSnapshot() });
+  const useMonitor = (onChange: (dragState: DragState) => void) => {
+    const state = useSyncExternalStore(subscribe, getSnapshot);
 
-    useSyncExternalStore(
-      (onStoreChange) => {
-        const f = () => {
-          const prev = lastSnapshot.current;
-          const next = getSnapshot();
-
-          if (
-            prev.dragSource?.id !== next.dragSource?.id ||
-            prev.target?.id !== next.target?.id
-          ) {
-            lastSnapshot.current = { ...next };
-            onStoreChange();
-            onChange(lastSnapshot.current);
-          }
-        };
-
-        const unsb = subscribe(f);
-        return () => {
-          unsb();
-        };
-      },
-      () => lastSnapshot.current,
-    );
+    useEffect(() => {
+      onChange(state);
+    }, [state, onChange]);
   };
 
   const useSortable = (

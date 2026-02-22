@@ -89,7 +89,7 @@ const items2 = [genColumn(), genColumn(), genColumn(), genColumn()];
 export const DnDExample = () => {
   const [state, setState] = useState(items2);
 
-  const onDragChange = useCallback(
+  const onDragStateChange = useCallback(
     ({
       dragSource: source,
       target,
@@ -178,13 +178,15 @@ export const DnDExample = () => {
     [],
   );
 
-  useMonitor(onDragChange);
+  useMonitor(onDragStateChange);
 
   return (
     <div
       style={{
+        margin: 100,
         paddingTop: 20,
         display: 'flex',
+        flexDirection: 'column',
         gap: 10,
         justifyContent: 'stretch',
       }}
