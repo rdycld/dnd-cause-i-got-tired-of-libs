@@ -69,7 +69,14 @@ export const createDndStore = () => {
     };
   };
 
-  const findNextDropTarget = (e: MouseEvent, source: Dragable) => {
+  const findNextDropTarget = (
+    e: MouseEvent,
+    getSource: () => Dragable | undefined,
+  ) => {
+    const source = getSource();
+
+    if (!source) return;
+
     let nextTarget = findClosestTarget(e, source, dragableItems.values());
     assert(nextTarget);
 
@@ -115,7 +122,8 @@ export const createDndStore = () => {
               source: dragable,
             });
           },
-          onDrag: (e) => findNextDropTarget(e, dragable),
+          onDrag: (e) =>
+            findNextDropTarget(e, () => dragableItems.get(dragable.id)),
           onDragEnd: () => {
             updateSnapshotAndEmitIfNeeded_mutable({
               source: undefined,
