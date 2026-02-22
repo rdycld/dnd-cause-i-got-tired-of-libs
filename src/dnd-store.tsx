@@ -104,6 +104,8 @@ export const createDndStore = () => {
   };
 
   const putDragable = (dragable: Dragable) => {
+    let cleaned = false;
+
     const exists = dragableItems.get(dragable.id);
     exists?.cleanup();
 
@@ -135,8 +137,11 @@ export const createDndStore = () => {
     );
 
     const cleanup = () => {
-      dragableItems.delete(dragable.id);
-      dragAbortController.abort();
+      if (!cleaned) {
+        dragableItems.delete(dragable.id);
+        dragAbortController.abort();
+      }
+      cleaned = true;
     };
 
     dragableItems.set(dragable.id, { ...dragable, cleanup });
@@ -169,6 +174,7 @@ export const createDndStore = () => {
       ref: useCallback(
         (el: HTMLElement | null) => {
           cleanup.current();
+
           if (!el) return;
 
           cleanup.current = putDragable({ ...config, el, id });
