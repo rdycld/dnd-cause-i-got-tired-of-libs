@@ -16,7 +16,7 @@ export type Dragable = {
 };
 
 type DragState = {
-  dragSource: Dragable | undefined;
+  source: Dragable | undefined;
   target: Dragable | undefined;
 };
 
@@ -25,7 +25,7 @@ export const createDndStore = () => {
   const dragableItems = new Map<string, Dragable & { cleanup: VoidFunction }>();
 
   let state: DragState = {
-    dragSource: undefined,
+    source: undefined,
     target: undefined,
   };
 
@@ -69,7 +69,7 @@ export const createDndStore = () => {
     };
   };
 
-  const handleDrag = (e: MouseEvent, source: Dragable) => {
+  const findNextDropTarget = (e: MouseEvent, source: Dragable) => {
     let nextTarget = findClosestTarget(e, source, dragableItems.values());
     assert(nextTarget);
 
@@ -78,8 +78,6 @@ export const createDndStore = () => {
       updateSnapshotAndEmitIfNeeded_mutable({ target: nextTarget });
       return;
     }
-
-    assert(nextTarget.items);
 
     const itemTarget = findClosestItemTarget(
       e,
@@ -98,7 +96,7 @@ export const createDndStore = () => {
     });
   };
 
-  const addDragable = (dragable: Dragable) => {
+  const putDragable = (dragable: Dragable) => {
     const exists = dragableItems.get(dragable.id);
     exists?.cleanup();
 
@@ -113,14 +111,16 @@ export const createDndStore = () => {
             e.stopPropagation();
           },
           onDragStart: () => {
-            state.dragSource = dragable;
-            emit();
+            updateSnapshotAndEmitIfNeeded_mutable({
+              source: dragable,
+            });
           },
-          onDrag: (e) => handleDrag(e, dragable),
+          onDrag: (e) => findNextDropTarget(e, dragable),
           onDragEnd: () => {
-            state.dragSource = undefined;
-            state.target = undefined;
-            emit();
+            updateSnapshotAndEmitIfNeeded_mutable({
+              source: undefined,
+              target: undefined,
+            });
           },
         }),
       { signal },
@@ -150,7 +150,7 @@ export const createDndStore = () => {
   ) => {
     const isDragging = useSyncExternalStore(
       subscribe,
-      () => getSnapshot().dragSource?.id === id,
+      () => getSnapshot().source?.id === id,
     );
 
     const cleanup = useRef(() => {});
@@ -163,11 +163,7 @@ export const createDndStore = () => {
           cleanup.current();
           if (!el) return;
 
-          cleanup.current = addDragable({
-            ...config,
-            el,
-            id,
-          });
+          cleanup.current = putDragable({ ...config, el, id });
         },
         [id, config],
       ),

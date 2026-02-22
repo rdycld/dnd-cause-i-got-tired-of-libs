@@ -94,10 +94,10 @@ export const DnDExample = () => {
 
   const onDragStateChange = useCallback(
     ({
-      dragSource: source,
+      source: source,
       target,
     }: {
-      dragSource: Dragable | undefined;
+      source: Dragable | undefined;
       target: Dragable | undefined;
     }) => {
       if (!(source && target)) return;
