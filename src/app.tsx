@@ -28,6 +28,18 @@ const getPage = (): keyof typeof examples => {
 export const App = () => {
   const [example, setExample] = useState<keyof typeof examples>(getPage());
 
+  const toggleDebug = () => {
+    const exists = localStorage.getItem('debug');
+
+    if (exists === null) {
+      localStorage.setItem('debug', 'true');
+    } else {
+      localStorage.removeItem('debug');
+    }
+
+    window.location.reload();
+  };
+
   const changeExample = (example: keyof typeof examples) => {
     window.history.replaceState('', '', `?example=${example}`);
     setExample(example);
@@ -39,6 +51,7 @@ export const App = () => {
         <a href='https://github.com/rdycld/dnd-cause-i-got-tired-of-libs'>
           source code
         </a>
+        <button onClick={toggleDebug}>toggle debug</button>
         <label>
           vertical list
           <input

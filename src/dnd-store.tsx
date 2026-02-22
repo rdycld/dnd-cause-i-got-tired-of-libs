@@ -1,5 +1,6 @@
 import { drag } from './drag';
 import {
+  addDebugLines,
   findClosestItemTarget,
   findClosestTarget,
   handleDifferentHeights,
@@ -20,9 +21,22 @@ type DragState = {
   target: Dragable | undefined;
 };
 
-export const createDndStore = () => {
+export const createDndStore = (
+  withDebugLines = localStorage.getItem('debug'),
+) => {
   const listeners = new Set<VoidFunction>();
   const dragableItems = new Map<string, Dragable & { cleanup: VoidFunction }>();
+
+  //! DEBUG
+  const debugLines: HTMLDivElement[] = [];
+  //@ts-expect-error its ok
+  debugLines.clear = function () {
+    for (const l of this) {
+      l.remove();
+    }
+    this.length = 0;
+  };
+  //! DEBUG
 
   let state: DragState = {
     source: undefined,
@@ -77,6 +91,14 @@ export const createDndStore = () => {
 
     if (!source) return;
 
+    //! DEBUG
+    if (withDebugLines) {
+      //@ts-expect-error its ok
+      debugLines.clear();
+      addDebugLines(e, source, dragableItems.values(), debugLines);
+    }
+    //! DEBUG
+
     let nextTarget = findClosestTarget(e, source, dragableItems.values());
     assert(nextTarget);
 
@@ -127,6 +149,12 @@ export const createDndStore = () => {
           onDrag: (e) =>
             findNextDropTarget(e, () => dragableItems.get(dragable.id)),
           onDragEnd: () => {
+            //! DEBUG
+            if (withDebugLines)
+              //@ts-expect-error its ok
+              debugLines.clear();
+            //! DEBUG
+
             updateSnapshotAndEmitIfNeeded_mutable({
               source: undefined,
               target: undefined,
