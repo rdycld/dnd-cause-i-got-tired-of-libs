@@ -69,7 +69,7 @@ const Column = memo(
   },
 );
 
-const items2 = Array.from({ length: 5 }, () => genColumn(10));
+const items2 = Array.from({ length: 5 }, (_, i) => genColumn(i ? i + 3 : 0));
 export const DnDExampleNestedListHorizontal = () => {
   const [state, setState] = useState(items2);
 

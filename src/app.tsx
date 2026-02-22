@@ -15,8 +15,24 @@ const examples = {
   nestedGrids: <DnDExampleNestedGrid />,
 };
 
+const getPage = (): keyof typeof examples => {
+  const sp = new URLSearchParams(window.location.search);
+
+  const example = sp.get('example') ?? 'listVertical';
+
+  return Object.keys(examples).includes(example)
+    ? (example as keyof typeof examples)
+    : 'listVertical';
+};
+
 export const App = () => {
-  const [example, setExample] = useState<keyof typeof examples>('listVertical');
+  const [example, setExample] = useState<keyof typeof examples>(getPage());
+
+  const changeExample = (example: keyof typeof examples) => {
+    window.history.replaceState('', '', `?example=${example}`);
+    setExample(example);
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', gap: 20 }}>
@@ -26,7 +42,7 @@ export const App = () => {
             type='checkbox'
             checked={example === 'listVertical'}
             onChange={(e) =>
-              e.target.checked ? setExample('listVertical') : undefined
+              e.target.checked ? changeExample('listVertical') : undefined
             }
           />
         </label>
@@ -36,7 +52,7 @@ export const App = () => {
             type='checkbox'
             checked={example === 'listHorizontal'}
             onChange={(e) =>
-              e.target.checked ? setExample('listHorizontal') : undefined
+              e.target.checked ? changeExample('listHorizontal') : undefined
             }
           />
         </label>
@@ -46,7 +62,7 @@ export const App = () => {
             type='checkbox'
             checked={example === 'grid'}
             onChange={(e) =>
-              e.target.checked ? setExample('grid') : undefined
+              e.target.checked ? changeExample('grid') : undefined
             }
           />
         </label>
@@ -56,7 +72,7 @@ export const App = () => {
             type='checkbox'
             checked={example === 'nestedListVertical'}
             onChange={(e) =>
-              e.target.checked ? setExample('nestedListVertical') : undefined
+              e.target.checked ? changeExample('nestedListVertical') : undefined
             }
           />
         </label>
@@ -66,7 +82,9 @@ export const App = () => {
             type='checkbox'
             checked={example === 'nesteListHorizontal'}
             onChange={(e) =>
-              e.target.checked ? setExample('nesteListHorizontal') : undefined
+              e.target.checked
+                ? changeExample('nesteListHorizontal')
+                : undefined
             }
           />
         </label>
@@ -76,7 +94,7 @@ export const App = () => {
             type='checkbox'
             checked={example === 'nestedGrids'}
             onChange={(e) =>
-              e.target.checked ? setExample('nestedGrids') : undefined
+              e.target.checked ? changeExample('nestedGrids') : undefined
             }
           />
         </label>
