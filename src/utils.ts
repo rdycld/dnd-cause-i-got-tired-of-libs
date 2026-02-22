@@ -3,32 +3,6 @@ import { calcDistanceBetweenRectMiddleAndPointer } from './calc-distance-between
 import type { Dragable } from './dnd-store';
 import { isPointerInRect } from './is-pointer-in-rect';
 
-// /**
-//  *
-//  * @param event
-//  * @param source
-//  * @param targets
-//  * @returns
-//  */
-// export const findIntersection = (
-//   event: MouseEvent,
-//   source: Dragable,
-//   targets: MapIterator<Dragable>,
-// ) => {
-//   let intersection: Dragable | undefined;
-
-//   for (const target of targets) {
-//     if (!target.accept.includes(source.type)) continue;
-
-//     if (isPointerInRect(target.el.getBoundingClientRect(), event)) {
-//       intersection = target;
-//       break;
-//     }
-//   }
-
-//   return intersection;
-// };
-
 export const findClosestTarget = (
   event: MouseEvent,
   source: Dragable,
@@ -87,5 +61,27 @@ export const findClosestItemTarget = (
   }
 
   return target;
+};
+
+export const handleDifferentHeights = (
+  e: MouseEvent,
+  source: Dragable,
+  nextTarget: Dragable,
+) => {
+  const sourceRect = source.el.getBoundingClientRect();
+  const nextTargetRect = nextTarget.el.getBoundingClientRect();
+
+  if (sourceRect.height === nextTargetRect.height) return nextTarget;
+
+  const top = Math.min(sourceRect.top, nextTargetRect.top);
+  const threshold = top + (sourceRect.height + nextTargetRect.height) / 2;
+  const isOverThreshold = e.clientY > threshold;
+
+  const [underThresholdDragable, overThresholdDragable] =
+    sourceRect.top > nextTargetRect.top
+      ? [nextTarget, source]
+      : [source, nextTarget];
+
+  return isOverThreshold ? overThresholdDragable : underThresholdDragable;
 };
 

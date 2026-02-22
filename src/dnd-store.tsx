@@ -1,5 +1,9 @@
 import { drag } from './drag';
-import { findClosestItemTarget, findClosestTarget } from './utils';
+import {
+  findClosestItemTarget,
+  findClosestTarget,
+  handleDifferentHeights,
+} from './utils';
 import { assert } from './assert';
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 
@@ -20,7 +24,7 @@ export const createDndStore = () => {
   const listeners = new Set<VoidFunction>();
   const dragableItems = new Map<string, Dragable & { cleanup: VoidFunction }>();
 
-  let snapshot: DragState = {
+  let state: DragState = {
     dragSource: undefined,
     target: undefined,
   };
@@ -31,19 +35,24 @@ export const createDndStore = () => {
     let same = true;
 
     for (const [k, v] of Object.entries(newState)) {
-      same = Object.is(v, snapshot[k]);
+      if (!Object.hasOwn(state, k)) {
+        console.error('keys are bad');
+        break;
+      }
+      //@ts-expect-error its ok, we checked above
+      same = Object.is(v, state[k]);
 
       if (!same) break;
     }
 
     if (!same) {
-      snapshot = { ...snapshot, ...newState };
+      state = { ...state, ...newState };
       emit();
     }
   };
 
   const getSnapshot = () => {
-    return snapshot;
+    return state;
   };
 
   const emit = () => {
@@ -65,6 +74,7 @@ export const createDndStore = () => {
     assert(nextTarget);
 
     if (!nextTarget.items) {
+      nextTarget = handleDifferentHeights(e, source, nextTarget);
       updateSnapshotAndEmitIfNeeded_mutable({ target: nextTarget });
       return;
     }
@@ -81,7 +91,11 @@ export const createDndStore = () => {
     if (itemTarget) {
       nextTarget = itemTarget;
     }
-    updateSnapshotAndEmitIfNeeded_mutable({ target: nextTarget });
+
+    nextTarget = handleDifferentHeights(e, source, nextTarget);
+    updateSnapshotAndEmitIfNeeded_mutable({
+      target: nextTarget,
+    });
   };
 
   const addDragable = (dragable: Dragable) => {
@@ -99,13 +113,13 @@ export const createDndStore = () => {
             e.stopPropagation();
           },
           onDragStart: () => {
-            snapshot.dragSource = dragable;
+            state.dragSource = dragable;
             emit();
           },
           onDrag: (e) => handleDrag(e, dragable),
           onDragEnd: () => {
-            snapshot.dragSource = undefined;
-            snapshot.target = undefined;
+            state.dragSource = undefined;
+            state.target = undefined;
             emit();
           },
         }),

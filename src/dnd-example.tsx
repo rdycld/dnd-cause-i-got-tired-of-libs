@@ -53,13 +53,16 @@ const Column = memo(
           border: '1px solid red',
           background: 'fuchsia',
           opacity: isDragging ? 0.5 : 1,
+          // display: 'grid',
+          // gridTemplateColumns: '1fr 1fr',
           display: 'flex',
           flexDirection: 'column',
           gap: 5,
         }}
         ref={ref}
       >
-        {label}
+        <div>{label}</div>
+        <div>{label}</div>
         {items.map((item) => (
           <Item key={item.id} id={item.id} label={item.label} />
         ))}
