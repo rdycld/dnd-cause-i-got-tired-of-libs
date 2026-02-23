@@ -116,7 +116,7 @@ export const createDndStore = (
     grabOffset.y = top - clientY;
   };
 
-  const updateOverlay = (e: MouseEvent) => {
+  const updateDragOverlay = (e: MouseEvent) => {
     document.documentElement.style.setProperty(
       varDragOverlayX,
       `${e.clientX + grabOffset.x}px`,
@@ -127,7 +127,7 @@ export const createDndStore = (
     );
   };
 
-  const dropOverlay = ({ clientX, clientY }: MouseEvent) => {
+  const dropDragOverlay = ({ clientX, clientY }: MouseEvent) => {
     const dragged = dragableItems.get(state.source?.id ?? '');
     if (!dragged) return;
 
@@ -225,7 +225,7 @@ export const createDndStore = (
           },
           onDrag: (e) => {
             findNextDropTarget(e, () => dragableItems.get(dragable.id));
-            updateOverlay(e);
+            updateDragOverlay(e);
           },
           onDragEnd: (e) => {
             //! DEBUG
@@ -234,7 +234,7 @@ export const createDndStore = (
               debugLines.clear();
             //! DEBUG
 
-            dropOverlay(e);
+            dropDragOverlay(e);
             updateSnapshotAndEmitIfNeeded_mutable({
               source: undefined,
               target: undefined,
@@ -302,7 +302,6 @@ export const createDndStore = (
     const source = useSyncExternalStore(subscribe, () => state.source);
     const [mounted, setMounted] = useState(!!source);
     const [deferredSource, setDeferredSource] = useState(source);
-    const [styles, setStyles] = useState('drag-overlay');
 
     useEffect(() => {
       let timeoutId: number | undefined;
@@ -313,17 +312,14 @@ export const createDndStore = (
       }
 
       if (mounted && !source) {
-        setStyles('drag-overlay drag-overlay-unmounting');
-
         timeoutId = window.setTimeout(() => {
           setDeferredSource(source);
-          setStyles('drag-overlay');
         }, dropAnimationDurationMs);
       }
       return () => clearTimeout(timeoutId);
     }, [mounted, source]);
 
-    return children({ source: deferredSource, styles });
+    return children({ source: deferredSource, styles: 'drag-overlay' });
   };
 
   return { useSortable, useMonitor, DragOverlay };
