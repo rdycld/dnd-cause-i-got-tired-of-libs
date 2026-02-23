@@ -1,0 +1,12 @@
+.drag-overlay {
+  position: fixed;
+  left: var(--drag-overlay-x);
+  top: var(--drag-overlay-y);
+  filter: drop-shadow(0 0 0.75rem crimson);
+  transition: transform 200ms ease-out;
+}
+
+.drag-overlay.drag-overlay-unmounting {
+  transform: translate(var(--drag-overlay-drop-x), var(--drag-overlay-drop-y));
+
+}

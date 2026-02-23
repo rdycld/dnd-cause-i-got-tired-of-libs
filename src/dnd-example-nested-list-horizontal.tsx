@@ -3,7 +3,7 @@ import { assert } from './assert';
 import { createDndStore, type Dragable } from './dnd-store';
 import { genColumn } from './examples-helpers';
 
-const { useMonitor, useSortable } = createDndStore();
+const { useMonitor, useSortable, DragOverlay } = createDndStore();
 
 const Item = memo(({ id, label }: { id: string; label: string }) => {
   const { ref, isDragging } = useSortable(id, {
@@ -176,6 +176,34 @@ export const DnDExampleNestedListHorizontal = () => {
       {state.map(({ id, items, label }) => (
         <Column id={id} key={id} items={items} label={label} />
       ))}
+      <DragOverlay>
+        {(props) =>
+          props.source?.type === 'parent' ? (
+            <div
+              className={props.styles}
+              style={{
+                border: '1px solid red',
+                background: 'fuchsia',
+                width: 172,
+                height: 360,
+              }}
+            ></div>
+          ) : props.source?.type === 'child' ? (
+            <div
+              className={props.styles}
+              style={{
+                border: '1px solid yellow',
+                background: 'cyan',
+                height: 42,
+                width: 150,
+                overflow: 'hidden',
+              }}
+            >
+              {JSON.stringify(props.source?.id)}
+            </div>
+          ) : null
+        }
+      </DragOverlay>
     </div>
   );
 };

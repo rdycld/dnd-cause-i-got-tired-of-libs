@@ -5,7 +5,13 @@ import {
   handleDifferentDimensions,
 } from './utils';
 import { assert } from './assert';
-import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import { addDebugLines } from './debug';
 
 export type Dragable = {
@@ -21,11 +27,26 @@ type DragState = {
   target: Dragable | undefined;
 };
 
+const dropAnimationDurationMs = 250 as const;
+const varDragOverlayX = '--drag-overlay-x' as const;
+const varDragOverlayY = '--drag-overlay-y' as const;
+const varDragOverlayDropX = '--drag-overlay-drop-x' as const;
+const varDragOverlayDropY = '--drag-overlay-drop-y' as const;
+
 export const createDndStore = (
   withDebugLines = localStorage.getItem('debug'),
 ) => {
   const listeners = new Set<VoidFunction>();
   const dragableItems = new Map<string, Dragable & { cleanup: VoidFunction }>();
+  const grabOffset = {
+    x: 0,
+    y: 0,
+  };
+
+  let state: DragState = {
+    source: undefined,
+    target: undefined,
+  };
 
   //! DEBUG
   const debugLines: HTMLDivElement[] = [];
@@ -37,11 +58,6 @@ export const createDndStore = (
     this.length = 0;
   };
   //! DEBUG
-
-  let state: DragState = {
-    source: undefined,
-    target: undefined,
-  };
 
   const updateSnapshotAndEmitIfNeeded_mutable = (
     newState: Partial<DragState>,
@@ -81,6 +97,52 @@ export const createDndStore = (
     return () => {
       listeners.delete(listener);
     };
+  };
+
+  const calcOverlayGrabOffset = (e: MouseEvent, dragable: Dragable) => {
+    const { clientX, clientY } = e;
+    const { left, top } = dragable.el.getBoundingClientRect();
+
+    grabOffset.x = left - clientX;
+    grabOffset.y = top - clientY;
+  };
+
+  const updateOverlay = (e: MouseEvent) => {
+    document.documentElement.style.setProperty(
+      varDragOverlayX,
+      `${e.clientX + grabOffset.x}px`,
+    );
+    document.documentElement.style.setProperty(
+      varDragOverlayY,
+      `${e.clientY + grabOffset.y}px`,
+    );
+  };
+
+  //todo
+  // const cleanAfterDrop = () => {
+  //   document.documentElement.style.removeProperty(varDragOverlayX);
+  //   document.documentElement.style.removeProperty(varDragOverlayY);
+  //   document.documentElement.style.removeProperty(varDragOverlayDropX);
+  //   document.documentElement.style.removeProperty(varDragOverlayDropY);
+  // };
+
+  const dropOverlay = ({ clientX, clientY }: MouseEvent) => {
+    const dragged = dragableItems.get(state.source?.id ?? '');
+    if (!dragged) return;
+
+    const { left, top } = dragged.el.getBoundingClientRect();
+
+    const dropX = left - clientX - grabOffset.x;
+    const dropY = top - clientY - grabOffset.y;
+
+    document.documentElement.style.setProperty(
+      varDragOverlayDropX,
+      `${dropX}px`,
+    );
+    document.documentElement.style.setProperty(
+      varDragOverlayDropY,
+      `${dropY}px`,
+    );
   };
 
   const findNextDropTarget = (
@@ -152,19 +214,23 @@ export const createDndStore = (
             e.stopPropagation();
           },
           onDragStart: () => {
+            calcOverlayGrabOffset(e, dragable);
             updateSnapshotAndEmitIfNeeded_mutable({
               source: dragable,
             });
           },
-          onDrag: (e) =>
-            findNextDropTarget(e, () => dragableItems.get(dragable.id)),
-          onDragEnd: () => {
+          onDrag: (e) => {
+            findNextDropTarget(e, () => dragableItems.get(dragable.id));
+            updateOverlay(e);
+          },
+          onDragEnd: (e) => {
             //! DEBUG
             if (withDebugLines)
               //@ts-expect-error its ok
               debugLines.clear();
             //! DEBUG
 
+            dropOverlay(e);
             updateSnapshotAndEmitIfNeeded_mutable({
               source: undefined,
               target: undefined,
@@ -222,6 +288,40 @@ export const createDndStore = (
     };
   };
 
-  return { useSortable, useMonitor };
+  type DragOverlayProps = {
+    children: (props: {
+      source: Dragable | undefined;
+      styles: string;
+    }) => React.ReactNode;
+  };
+  const DragOverlay = ({ children }: DragOverlayProps) => {
+    const source = useSyncExternalStore(subscribe, () => state.source);
+    const [mounted, setMounted] = useState(!!source);
+    const [deferredSource, setDeferredSource] = useState(source);
+    const [styles, setStyles] = useState('drag-overlay');
+
+    useEffect(() => {
+      let timeoutId: number | undefined;
+      if (source) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setMounted(true);
+        setDeferredSource(source);
+      }
+
+      if (mounted && !source) {
+        setStyles('drag-overlay drag-overlay-unmounting');
+
+        timeoutId = window.setTimeout(() => {
+          setDeferredSource(source);
+          setStyles('drag-overlay');
+        }, dropAnimationDurationMs);
+      }
+      return () => clearTimeout(timeoutId);
+    }, [mounted, source]);
+
+    return children({ source: deferredSource, styles });
+  };
+
+  return { useSortable, useMonitor, DragOverlay };
 };
 
