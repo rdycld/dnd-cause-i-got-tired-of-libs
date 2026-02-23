@@ -36,16 +36,16 @@ const varDragOverlayDropY = '--drag-overlay-drop-y' as const;
 export const createDndStore = (
   withDebugLines = localStorage.getItem('debug'),
 ) => {
-  const listeners = new Set<VoidFunction>();
-  const dragableItems = new Map<string, Dragable & { cleanup: VoidFunction }>();
-  const grabOffset = {
-    x: 0,
-    y: 0,
-  };
-
   let state: DragState = {
     source: undefined,
     target: undefined,
+  };
+
+  const listeners = new Set<VoidFunction>();
+  const dragableItems = new Map<string, Dragable & { cleanup: VoidFunction }>();
+  const grabOffset = {
+    x: Number.POSITIVE_INFINITY,
+    y: Number.POSITIVE_INFINITY,
   };
 
   //! DEBUG
@@ -99,7 +99,16 @@ export const createDndStore = (
     };
   };
 
-  const calcOverlayGrabOffset = (e: MouseEvent, dragable: Dragable) => {
+  const cleanAfterDrop = () => {
+    document.documentElement.style.removeProperty(varDragOverlayX);
+    document.documentElement.style.removeProperty(varDragOverlayY);
+    document.documentElement.style.removeProperty(varDragOverlayDropX);
+    document.documentElement.style.removeProperty(varDragOverlayDropY);
+  };
+
+  const initDragOverlay = (e: MouseEvent, dragable: Dragable) => {
+    cleanAfterDrop();
+
     const { clientX, clientY } = e;
     const { left, top } = dragable.el.getBoundingClientRect();
 
@@ -118,14 +127,6 @@ export const createDndStore = (
     );
   };
 
-  //todo
-  // const cleanAfterDrop = () => {
-  //   document.documentElement.style.removeProperty(varDragOverlayX);
-  //   document.documentElement.style.removeProperty(varDragOverlayY);
-  //   document.documentElement.style.removeProperty(varDragOverlayDropX);
-  //   document.documentElement.style.removeProperty(varDragOverlayDropY);
-  // };
-
   const dropOverlay = ({ clientX, clientY }: MouseEvent) => {
     const dragged = dragableItems.get(state.source?.id ?? '');
     if (!dragged) return;
@@ -143,6 +144,9 @@ export const createDndStore = (
       varDragOverlayDropY,
       `${dropY}px`,
     );
+
+    grabOffset.x = Number.POSITIVE_INFINITY;
+    grabOffset.y = Number.POSITIVE_INFINITY;
   };
 
   const findNextDropTarget = (
@@ -214,7 +218,7 @@ export const createDndStore = (
             e.stopPropagation();
           },
           onDragStart: () => {
-            calcOverlayGrabOffset(e, dragable);
+            initDragOverlay(e, dragable);
             updateSnapshotAndEmitIfNeeded_mutable({
               source: dragable,
             });
