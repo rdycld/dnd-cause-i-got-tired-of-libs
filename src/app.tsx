@@ -40,6 +40,32 @@ export const App = () => {
     window.location.reload();
   };
 
+  const longLiveEntropy = () => {
+    const colWidths = Array.from({ length: 100 }, () =>
+      Math.floor(Math.random() * 200 + 150),
+    );
+
+    const itemHeights = Array.from({ length: 100 }, () =>
+      Math.floor(Math.random() * 200 + 50),
+    );
+
+    const colors = Array.from(
+      { length: 100 },
+      () =>
+        `#${Math.floor(Math.random() * 255)
+          .toString(16)
+          .padStart(2, '0')}${Math.floor(Math.random() * 255)
+          .toString(16)
+          .padStart(2, '0')}${Math.floor(Math.random() * 255)
+          .toString(16)
+          .padStart(2, '0')}`,
+    );
+
+    localStorage.setItem('col-widths', JSON.stringify(colWidths));
+    localStorage.setItem('item-heights', JSON.stringify(itemHeights));
+    localStorage.setItem('colors', JSON.stringify(colors));
+  };
+
   const changeExample = (example: keyof typeof examples) => {
     window.history.replaceState('', '', `?example=${example}`);
     setExample(example);
@@ -52,6 +78,7 @@ export const App = () => {
           source code
         </a>
         <button onClick={toggleDebug}>toggle debug</button>
+        <button onClick={longLiveEntropy}>randomize sizes and colors</button>
         <label>
           vertical list
           <input

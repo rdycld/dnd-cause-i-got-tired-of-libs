@@ -254,6 +254,11 @@ export const createDndStore = (
 
     dragableItems.set(dragable.id, { ...dragable, cleanup });
 
+    //make sure we have latest drag source in state
+    if (state.source?.id === dragable.id && state.source.el !== dragable.el) {
+      updateSnapshotAndEmitIfNeeded_mutable({ source: dragable });
+    }
+
     return cleanup;
   };
 

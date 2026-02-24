@@ -2,41 +2,21 @@ import { memo, useCallback, useState } from 'react';
 import { assert } from './assert';
 import { createDndStore, type Dragable } from './dnd-store';
 import { genColumn } from './examples-helpers';
+import { Item } from './item';
 
 const { useMonitor, useSortable, DragOverlay } = createDndStore();
-
-const Item = memo(({ id, label }: { id: string; label: string }) => {
-  const { ref, isDragging } = useSortable(id, {
-    type: 'child',
-    accept: ['child'],
-  });
-
-  return (
-    <div
-      ref={ref}
-      style={{
-        userSelect: 'none',
-        border: '1px solid yellow',
-        background: 'cyan',
-        padding: 10,
-        minWidth: 100,
-        opacity: isDragging ? 0.5 : 1,
-      }}
-    >
-      {label}
-    </div>
-  );
-});
 
 const Column = memo(
   ({
     id,
     items,
     label,
+    color,
   }: {
     id: string;
     label: string;
     items: { id: string; label: string }[];
+    color: string;
   }) => {
     const { ref, isDragging } = useSortable(id, {
       type: 'parent',
@@ -51,7 +31,7 @@ const Column = memo(
           padding: 10,
           minWidth: 150,
           border: '1px solid red',
-          background: 'fuchsia',
+          background: color,
           opacity: isDragging ? 0.5 : 1,
           display: 'flex',
           flexDirection: 'column',
@@ -60,8 +40,8 @@ const Column = memo(
         ref={ref}
       >
         {label}
-        {items.map((item) => (
-          <Item key={item.id} id={item.id} label={item.label} />
+        {items.map((item: any) => (
+          <Item key={item.id} {...item} useSortable={useSortable} />
         ))}
       </div>
     );
@@ -173,36 +153,27 @@ export const DnDExampleNestedListHorizontal = () => {
         justifyContent: 'stretch',
       }}
     >
-      {state.map(({ id, items, label }) => (
-        <Column id={id} key={id} items={items} label={label} />
+      {state.map((c) => (
+        <Column key={c.id} {...c} />
       ))}
       <DragOverlay>
-        {(props) =>
-          props.source?.type === 'parent' ? (
+        {(props) => {
+          if (!props.source) return null;
+
+          const { width, height } = props.source.el.getBoundingClientRect();
+          const color = props.source.el.style.getPropertyValue('background');
+
+          return (
             <div
               className={props.styles}
               style={{
-                border: '1px solid red',
-                background: 'fuchsia',
-                width: 172,
-                height: 360,
+                width,
+                height,
+                backgroundColor: color,
               }}
             ></div>
-          ) : props.source?.type === 'child' ? (
-            <div
-              className={props.styles}
-              style={{
-                border: '1px solid yellow',
-                background: 'cyan',
-                height: 42,
-                width: 150,
-                overflow: 'hidden',
-              }}
-            >
-              {JSON.stringify(props.source?.id)}
-            </div>
-          ) : null
-        }
+          );
+        }}
       </DragOverlay>
     </div>
   );

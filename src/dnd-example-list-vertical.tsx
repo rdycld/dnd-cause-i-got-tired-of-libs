@@ -1,32 +1,10 @@
-import { memo, useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { assert } from './assert';
 import { createDndStore, type Dragable } from './dnd-store';
 import { genItem } from './examples-helpers';
+import { Item } from './item';
 
 const { useMonitor, useSortable } = createDndStore();
-
-const Item = memo(({ id, label }: { id: string; label: string }) => {
-  const { ref, isDragging } = useSortable(id, {
-    type: 'child',
-    accept: ['child'],
-  });
-
-  return (
-    <div
-      ref={ref}
-      style={{
-        userSelect: 'none',
-        border: '1px solid yellow',
-        background: 'cyan',
-        padding: 10,
-        minWidth: 100,
-        opacity: isDragging ? 0.5 : 1,
-      }}
-    >
-      {label}
-    </div>
-  );
-});
 
 const items = Array.from({ length: 100 }, () => genItem());
 
@@ -75,8 +53,8 @@ export const DnDExampleListVertical = () => {
         justifyContent: 'stretch',
       }}
     >
-      {state.map(({ id, label }) => (
-        <Item id={id} key={id} label={label} />
+      {state.map((p) => (
+        <Item key={p.id} {...p} useSortable={useSortable} />
       ))}
     </div>
   );
