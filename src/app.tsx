@@ -64,6 +64,7 @@ export const App = () => {
     localStorage.setItem('col-widths', JSON.stringify(colWidths));
     localStorage.setItem('item-heights', JSON.stringify(itemHeights));
     localStorage.setItem('colors', JSON.stringify(colors));
+    window.location.reload();
   };
 
   const changeExample = (example: keyof typeof examples) => {
