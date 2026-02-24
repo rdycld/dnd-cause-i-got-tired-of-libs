@@ -122,3 +122,19 @@ export const handleDifferentDimensions = (
   else return handleDifferentWidths(e, source, nextTarget);
 };
 
+export const areSame = <T extends Record<PropertyKey, unknown>>(a: T, b: T) => {
+  let same = true;
+
+  for (const [k, v] of Object.entries(b)) {
+    if (!Object.hasOwn(a, k)) {
+      console.error('keys are bad');
+      break;
+    }
+    same = Object.is(v, a[k]);
+
+    if (!same) break;
+  }
+
+  return same;
+};
+

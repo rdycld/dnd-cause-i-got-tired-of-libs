@@ -1,5 +1,6 @@
 import { drag } from './drag';
 import {
+  areSame,
   findClosestItemTarget,
   findClosestTarget,
   handleDifferentDimensions,
@@ -62,18 +63,7 @@ export const createDndStore = (
   const updateSnapshotAndEmitIfNeeded_mutable = (
     newState: Partial<DragState>,
   ) => {
-    let same = true;
-
-    for (const [k, v] of Object.entries(newState)) {
-      if (!Object.hasOwn(state, k)) {
-        console.error('keys are bad');
-        break;
-      }
-      //@ts-expect-error its ok, we checked above
-      same = Object.is(v, state[k]);
-
-      if (!same) break;
-    }
+    const same = areSame(state, newState);
 
     if (!same) {
       state = { ...state, ...newState };
@@ -86,17 +76,12 @@ export const createDndStore = (
   };
 
   const emit = () => {
-    for (const l of listeners) {
-      l();
-    }
+    for (const l of listeners) l();
   };
 
   const subscribe = (listener: VoidFunction) => {
     listeners.add(listener);
-
-    return () => {
-      listeners.delete(listener);
-    };
+    return () => listeners.delete(listener);
   };
 
   const cleanAfterDrop = () => {
@@ -178,9 +163,7 @@ export const createDndStore = (
       !nextTarget.items.find((el) => el.id === source.id) &&
       source.type === 'child'
     ) {
-      updateSnapshotAndEmitIfNeeded_mutable({
-        target: nextTarget,
-      });
+      updateSnapshotAndEmitIfNeeded_mutable({ target: nextTarget });
       return;
     }
 
