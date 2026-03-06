@@ -3,6 +3,7 @@ import {
   areSame,
   findClosestItemTarget,
   findClosestTarget,
+  findIntersecction,
   handleDifferentDimensions,
 } from './utils';
 import { assert } from './assert';
@@ -150,7 +151,10 @@ export const createDndStore = (
     }
     //! DEBUG
 
-    let nextTarget = findClosestTarget(e, source, dragableItems.values());
+    let nextTarget = findIntersecction(e, source, dragableItems.values());
+    if (!nextTarget)
+      nextTarget = findClosestTarget(e, source, dragableItems.values());
+
     assert(nextTarget);
 
     if (!nextTarget.items) {

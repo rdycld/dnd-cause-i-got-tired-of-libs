@@ -3,6 +3,28 @@ import { calcDistanceBetweenRectMiddleAndPointer } from './calc-distance-between
 import type { Dragable } from './dnd-store';
 import { isPointerInRect } from './is-pointer-in-rect';
 
+export const findIntersecction = (
+  { clientX, clientY }: MouseEvent,
+  source: Dragable,
+  targets: MapIterator<Dragable> | Dragable[],
+) => {
+  let intersection: Dragable | undefined;
+
+  for (const dragable of targets) {
+    if (!dragable.accept.includes(source.type)) continue;
+
+    const { left, top, right, bottom } = dragable.el.getBoundingClientRect();
+
+    if (clientX < left || clientX > right) continue;
+    if (clientY < top || clientY > bottom) continue;
+
+    intersection = dragable;
+    break;
+  }
+
+  return intersection;
+};
+
 export const findClosestTarget = (
   event: MouseEvent,
   source: Dragable,
